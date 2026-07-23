@@ -999,7 +999,7 @@ td.desc-cell b{color:var(--text);}
 <div class="dock">
   <div class="dock-inner">
     <button class="btn ghost sm" id="btnReset" title="Reset all values to the original workbook defaults">↺ Reset</button>
-    <button class="btn ghost sm" id="btnImportTool" title="Paste a product copied from Pump Selector or Pool Accessories Selector (click 'Send to BOQ' there first, then click this)">📥 Import from Tool</button>
+    <button class="btn ghost sm" id="btnImportTool" title="Pulls in anything sent from Pump Selector or Pool Accessories Selector. This also happens automatically every time you open this page.">📥 Import from Tool</button>
     <button class="btn teal" id="btnExportExcel">⬇ Export Excel</button>
     <button class="btn primary" id="btnExportPdf">⬇ Export PDF</button>
   </div>
@@ -2328,17 +2328,43 @@ async function cesClipboardRead(){
   if(window.CesBridge && window.CesBridge.getText){ return window.CesBridge.getText(); }
   return await navigator.clipboard.readText();
 }
+/* Pulls any items queued by the other two tools (localStorage, shared
+   automatically across every page on the same site/app — no clipboard
+   permission needed, works even without the button being pressed on
+   the sending side reaching the OS clipboard). Returns the number of
+   items processed (0 if the inbox was empty). */
+function drainBoqInbox(){
+  let items;
+  try{ items = JSON.parse(localStorage.getItem('ces_boq_inbox') || '[]'); }
+  catch(e){ items = []; }
+  items = Array.isArray(items) ? items.filter(x=>x && typeof x==='object' && x.__ces_link==='boq-item-v1') : [];
+  if(!items.length) return 0;
+  let added=0, updated=0;
+  items.forEach(src=>{ if(importBoqItem(src)==='updated') updated++; else added++; });
+  localStorage.removeItem('ces_boq_inbox');
+  buildBoqTable('mechboq_table', MECH_BOQ);
+  recalcAll();
+  const parts=[];
+  if(added) parts.push(added+' added');
+  if(updated) parts.push(updated+' updated');
+  toast('✓ Imported into Mechanical BOQ — '+parts.join(', '));
+  return items.length;
+}
 async function importFromTool(){
+  // 1) Same-origin inbox first — this is the reliable path.
+  if(drainBoqInbox() > 0) return;
+  // 2) Fallback: clipboard (only useful if both tools are opened as
+  //    plain local files, each on its own origin, with no shared site).
   let text;
   try{ text = await cesClipboardRead(); }
-  catch(e){ toast('⚠ Could not read clipboard — click "Send to BOQ" in the other tool first, then try again'); return; }
-  if(!text || !text.trim()){ toast('⚠ Clipboard is empty — click "Send to BOQ" in the other tool first'); return; }
+  catch(e){ toast('⚠ Nothing queued yet — open the other tool and tap "Send to BOQ" first'); return; }
+  if(!text || !text.trim()){ toast('⚠ Nothing queued yet — open the other tool and tap "Send to BOQ" first'); return; }
   let payload;
   try{ payload = JSON.parse(text); }
-  catch(e){ toast('⚠ Clipboard has no valid product data — click "Send to BOQ" in the other tool first'); return; }
+  catch(e){ toast('⚠ Nothing queued yet — open the other tool and tap "Send to BOQ" first'); return; }
   const raw = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.items) ? payload.items : [payload]);
   const items = raw.filter(x=>x && typeof x==='object' && x.__ces_link==='boq-item-v1');
-  if(!items.length){ toast('⚠ No CES-BOQ items found in clipboard'); return; }
+  if(!items.length){ toast('⚠ Nothing queued yet — open the other tool and tap "Send to BOQ" first'); return; }
   let added=0, updated=0;
   items.forEach(src=>{ if(importBoqItem(src)==='updated') updated++; else added++; });
   buildBoqTable('mechboq_table', MECH_BOQ);
@@ -3215,6 +3241,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   qs('#logoImg').src = 'data:image/png;base64,'+LOGO_B64;
   initTabs();
   buildEverything();
+  drainBoqInbox(); // auto-pull anything sent from Pump Selector / Accessories Selector
 
   qs('#btnExportExcel').addEventListener('click', ()=>{
     try{ exportExcel(); }catch(e){ console.error(e); toast('Excel export failed — see console'); }
