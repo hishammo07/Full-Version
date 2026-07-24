@@ -79,6 +79,13 @@ h1,h2,h3,h4{font-family:'Sora',sans-serif; margin:0; letter-spacing:-.01em;}
   background:#a2620a;color:#fff;border:none;padding:8px 14px;border-radius:8px;
   font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;
 }
+.ces-link-btn{
+  display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+  background:rgba(18,98,143,.08);color:var(--primary);border:1px solid rgba(18,98,143,.28);
+  font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;
+  transition:background .15s;
+}
+.ces-link-btn:hover{background:rgba(18,98,143,.18);}
 .topbar::after{
   content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:
@@ -350,6 +357,25 @@ td.desc-cell b{color:var(--text);}
           <div class="field"><label>USD → EGP Rate</label><input class="editable" id="rt_fx" type="number" step="0.01"></div>
         </div>
         <div class="note">These four rates are wired live into every calculation, exactly as in the original workbook (Dry Cost → VAT → Installation → Concept Cost → Profit → Unit Rate → Total). Change any of them and every BOQ sheet recalculates instantly.</div>
+      </div>
+    </div>
+
+    <div class="card" id="optSystemsCard">
+      <div class="card-h"><h3>Optional Systems</h3><span class="tag">Not every pool needs these — switch off what doesn't apply</span></div>
+      <div class="card-b">
+        <div class="grid c2">
+          <button type="button" class="btn" id="chooseNozzleBtn" data-on="1" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
+            <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
+            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">⛲ Waterfall / Nozzle Display</span>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Only if this pool has nozzle jets or a waterfall feature</span>
+          </button>
+          <button type="button" class="btn" id="chooseHeatingBtn" data-on="1" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
+            <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
+            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">🔥 Heating System</span>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Only if this pool has a heating requirement</span>
+          </button>
+        </div>
+        <div class="note">Switching a system off just hides its tab from the top navigation. Anything already added to its Material List / BOQ stays exactly where it is — it won't get deleted automatically, so double-check those sheets if you turn a system off mid-project.</div>
       </div>
     </div>
   </div>
@@ -1187,6 +1213,7 @@ let SKIMMER = {
 
 /* Which filtration system is currently active for this project ('overflow' | 'skimmer' | null = not chosen yet) */
 let FILT_SYS_ON = { overflow:false, skimmer:false };  // either or both can be true
+let OPT_SYS_ON = { nozzle:true, heating:true };  // both default ON to match the original workbook
 
 /* ============================================================
    DEFAULT STATE — Heating Calculation (standalone engineering calc)
@@ -1552,6 +1579,34 @@ function initFiltSystemChooser(){
   initFiltSystemChooser._wired = true;
   qs('#chooseOverflowBtn').addEventListener('click', ()=>toggleFiltSystem('overflow'));
   qs('#chooseSkimmerBtn').addEventListener('click', ()=>toggleFiltSystem('skimmer'));
+}
+
+/* Nozzle / Heating are full top-level tabs (unlike Overflow/Skimmer,
+   which are sub-sections of one tab) — toggling these just hides the
+   tab button + jumps away if it was the active one. Nothing already
+   added to their Material Lists / BOQ gets touched automatically. */
+function refreshOptSystemsUI(){
+  qs('#chooseNozzleBtn').dataset.on = OPT_SYS_ON.nozzle ? '1' : '0';
+  qs('#chooseHeatingBtn').dataset.on = OPT_SYS_ON.heating ? '1' : '0';
+  const nozTab = document.querySelector('.tab-btn[data-tab="nozzle"]');
+  const heatTab = document.querySelector('.tab-btn[data-tab="heating"]');
+  if(nozTab) nozTab.style.display = OPT_SYS_ON.nozzle ? '' : 'none';
+  if(heatTab) heatTab.style.display = OPT_SYS_ON.heating ? '' : 'none';
+  const activeBtn = document.querySelector('.tab-btn.active');
+  if(activeBtn && activeBtn.style.display === 'none'){
+    const coverBtn = document.querySelector('.tab-btn[data-tab="cover"]');
+    if(coverBtn) coverBtn.click();
+  }
+}
+function toggleOptSystem(sys){
+  OPT_SYS_ON[sys] = !OPT_SYS_ON[sys];
+  refreshOptSystemsUI();
+}
+function initOptSystemChooser(){
+  if(initOptSystemChooser._wired) return;
+  initOptSystemChooser._wired = true;
+  qs('#chooseNozzleBtn').addEventListener('click', ()=>toggleOptSystem('nozzle'));
+  qs('#chooseHeatingBtn').addEventListener('click', ()=>toggleOptSystem('heating'));
 }
 
 /* ============================================================
@@ -2328,6 +2383,80 @@ async function cesClipboardRead(){
   if(window.CesBridge && window.CesBridge.getText){ return window.CesBridge.getText(); }
   return await navigator.clipboard.readText();
 }
+/* ============================================================
+   DEEP LINKS TO PUMP SELECTOR / ACCESSORIES SELECTOR
+   One entry per "code" field in the Overflow (f_) and Skimmer (s_)
+   systems. Each gets a small 🔗 button that jumps to the right tool
+   (with Flow/Head pre-filled for pumps, or the right catalogue tab
+   pre-opened for accessories) and carries a unique "target" key so
+   the answer can be written straight back into this exact field.
+   ============================================================ */
+const CES_LINK_FIELDS = [
+  {field:'f_pumpcode',      kind:'pump', target:'overflow',            flowField:'f_flowperpump', headField:'f_pumphead', label:'Select Pump'},
+  {field:'f_filtercode',    kind:'acc',  target:'overflow-filter',     tab:'filtration',   label:'Select Filter'},
+  {field:'f_inletcode',     kind:'acc',  target:'overflow-inlet',      tab:'inlets',       label:'Select Inlet'},
+  {field:'f_overflowcode',  kind:'acc',  target:'overflow-gutter',     tab:'drains',       label:'Select Gutter/Grating'},
+  {field:'f_draincode',     kind:'acc',  target:'overflow-drain',      tab:'drains',       label:'Select Drain'},
+  {field:'f_vacuumcode',    kind:'acc',  target:'overflow-vacuum',     tab:'cleaning',     label:'Select Vacuum Fitting'},
+  {field:'f_chlorcode',     kind:'acc',  target:'overflow-chlor',      tab:'chlorination', label:'Select Chlorinator'},
+  {field:'f_dosingcode',    kind:'acc',  target:'overflow-dosing',     tab:'dosing',       label:'Select Dosing Pump'},
+  {field:'f_controllercode',kind:'acc',  target:'overflow-controller', tab:'chlorination', label:'Select Controller'},
+
+  {field:'s_pumpcode',      kind:'pump', target:'skimmer',             flowField:'s_flowperpump', headField:'s_pumphead', label:'Select Pump'},
+  {field:'s_filtercode',    kind:'acc',  target:'skimmer-filter',      tab:'filtration',   label:'Select Filter'},
+  {field:'s_inletcode',     kind:'acc',  target:'skimmer-inlet',       tab:'inlets',       label:'Select Inlet'},
+  {field:'s_skimmercode',   kind:'acc',  target:'skimmer-skimmer',     tab:'skimmers',     label:'Select Skimmer'},
+  {field:'s_draincode',     kind:'acc',  target:'skimmer-drain',       tab:'drains',       label:'Select Drain'},
+  {field:'s_vacuumcode',    kind:'acc',  target:'skimmer-vacuum',      tab:'cleaning',     label:'Select Vacuum Fitting'},
+  {field:'s_chlorcode',     kind:'acc',  target:'skimmer-chlor',       tab:'chlorination', label:'Select Chlorinator'},
+  {field:'s_dosingcode',    kind:'acc',  target:'skimmer-dosing',      tab:'dosing',       label:'Select Dosing Pump'},
+  {field:'s_controllercode',kind:'acc',  target:'skimmer-controller',  tab:'chlorination', label:'Select Controller'},
+];
+const CES_TARGET_FIELD_MAP = {};
+CES_LINK_FIELDS.forEach(cfg=>{ CES_TARGET_FIELD_MAP[cfg.target] = cfg.field; });
+
+function injectCesLinkButtons(){
+  CES_LINK_FIELDS.forEach(cfg=>{
+    const input = qs('#'+cfg.field);
+    if(!input || input.dataset.cesLinked) return;
+    input.dataset.cesLinked = '1';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ces-link-btn';
+    btn.textContent = '🔗 ' + cfg.label;
+    btn.addEventListener('click', ()=> openCesLinkedTool(cfg));
+    input.insertAdjacentElement('afterend', btn);
+  });
+}
+function openCesLinkedTool(cfg){
+  const returnUrl = location.pathname.split('/').pop() + '?tab=filtration';
+  const qsp = new URLSearchParams();
+  qsp.set('target', cfg.target);
+  qsp.set('return', returnUrl);
+  if(cfg.kind === 'pump'){
+    const flowEl = qs('#'+cfg.flowField), headEl = qs('#'+cfg.headField);
+    if(flowEl && flowEl.value) qsp.set('flow', flowEl.value);
+    if(headEl && headEl.value) qsp.set('head', headEl.value);
+    location.href = './PUMP-SELECTOR.html?' + qsp.toString();
+  }else{
+    qsp.set('tab', cfg.tab);
+    location.href = './POOL-ACCESSORIES-SELECTOR.html?' + qsp.toString();
+  }
+}
+/* Writes a returned product's code into the exact calc field that
+   asked for it, then fires the same 'input' event that field already
+   listens for — so FILT/SKIMMER state, Material Lists and the BOQ all
+   recalculate through the tool's normal (pre-existing) logic. */
+function applyCesTarget(src){
+  if(!src || !src.target) return;
+  const fieldId = CES_TARGET_FIELD_MAP[src.target];
+  if(!fieldId) return;
+  const el = qs('#'+fieldId);
+  if(!el) return;
+  el.value = src.code || '';
+  el.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
 /* Pulls any items queued by the other two tools (localStorage, shared
    automatically across every page on the same site/app — no clipboard
    permission needed, works even without the button being pressed on
@@ -2340,7 +2469,10 @@ function drainBoqInbox(){
   items = Array.isArray(items) ? items.filter(x=>x && typeof x==='object' && x.__ces_link==='boq-item-v1') : [];
   if(!items.length) return 0;
   let added=0, updated=0;
-  items.forEach(src=>{ if(importBoqItem(src)==='updated') updated++; else added++; });
+  items.forEach(src=>{
+    if(importBoqItem(src)==='updated') updated++; else added++;
+    applyCesTarget(src);
+  });
   localStorage.removeItem('ces_boq_inbox');
   buildBoqTable('mechboq_table', MECH_BOQ);
   recalcAll();
@@ -3166,6 +3298,7 @@ function resetAll(){
   SKIMMER = JSON.parse(JSON.stringify(FACTORY.SKIMMER));
   HEATING = JSON.parse(JSON.stringify(FACTORY.HEATING));
   FILT_SYS_ON = { overflow:false, skimmer:false };
+  OPT_SYS_ON = { nozzle:true, heating:true };
   MATLIST_OVERFLOW = [];
   MATLIST_SKIMMER = [];
   MATLIST_NOZ = [];
@@ -3205,6 +3338,8 @@ function resetAll(){
 function buildEverything(){
   initCoverTab();
   initFiltSystemChooser();
+  initOptSystemChooser();
+  refreshOptSystemsUI();
   initFiltrationTab();
   initSkimmerTab();
   initNozzleTab();
@@ -3242,6 +3377,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initTabs();
   buildEverything();
   drainBoqInbox(); // auto-pull anything sent from Pump Selector / Accessories Selector
+  injectCesLinkButtons();
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  if(urlTab){
+    const tabBtn = document.querySelector('.tab-btn[data-tab="'+urlTab+'"]');
+    if(tabBtn && tabBtn.style.display !== 'none') tabBtn.click();
+  }
 
   qs('#btnExportExcel').addEventListener('click', ()=>{
     try{ exportExcel(); }catch(e){ console.error(e); toast('Excel export failed — see console'); }
