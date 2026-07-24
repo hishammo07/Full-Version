@@ -914,7 +914,7 @@ td.desc-cell b{color:var(--text);}
         No filtration system switched on — go to <b>Filtration Design</b> to turn on Overflow and/or Skimmer.
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="matlistNozzleCard">
       <div class="card-h"><h3>Waterfall / Nozzle Display — Material List</h3>
         <span style="display:flex;gap:8px;">
           <button class="btn sm ghost" id="syncMatlistNoz">↻ Sync from calculator</button>
@@ -1573,6 +1573,7 @@ function toggleFiltSystem(sys){
   refreshFiltSystemUI();
   renderSummary();
   updateHeaderTotal();
+  saveProjectState();
 }
 function initFiltSystemChooser(){
   if(initFiltSystemChooser._wired) return;
@@ -1592,6 +1593,8 @@ function refreshOptSystemsUI(){
   const heatTab = document.querySelector('.tab-btn[data-tab="heating"]');
   if(nozTab) nozTab.style.display = OPT_SYS_ON.nozzle ? '' : 'none';
   if(heatTab) heatTab.style.display = OPT_SYS_ON.heating ? '' : 'none';
+  const nozMatCard = qs('#matlistNozzleCard');
+  if(nozMatCard) nozMatCard.style.display = OPT_SYS_ON.nozzle ? '' : 'none';
   const activeBtn = document.querySelector('.tab-btn.active');
   if(activeBtn && activeBtn.style.display === 'none'){
     const coverBtn = document.querySelector('.tab-btn[data-tab="cover"]');
@@ -1601,6 +1604,13 @@ function refreshOptSystemsUI(){
 function toggleOptSystem(sys){
   OPT_SYS_ON[sys] = !OPT_SYS_ON[sys];
   refreshOptSystemsUI();
+  if(sys==='nozzle'){
+    renderMaterialLists();
+    syncCalcCodesToBoq();
+    buildBoqTable('mechboq_table', visibleMechBoq());
+    recalcAll();
+  }
+  saveProjectState();
 }
 function initOptSystemChooser(){
   if(initOptSystemChooser._wired) return;
@@ -2001,7 +2011,7 @@ function seedNozMatList(){
 function renderMaterialLists(){
   if(FILT_SYS_ON.overflow) buildMatTable('matlist_overflow', MATLIST_OVERFLOW);
   if(FILT_SYS_ON.skimmer) buildMatTable('matlist_skimmer', MATLIST_SKIMMER);
-  buildMatTable('matlist_nozzle', MATLIST_NOZ);
+  if(OPT_SYS_ON.nozzle) buildMatTable('matlist_nozzle', MATLIST_NOZ);
   buildMatTable('matlist_elec', ELEC_MATLIST);
 }
 function initMaterialListControls(){
@@ -2261,6 +2271,17 @@ function tagMechSyncKeys(){
     }
   });
 }
+/* MECH_BOQ always keeps every line (nothing is ever deleted just by
+   flipping a system off — see syncCalcCodesToBoq, which zeroes the
+   qty/code of nozzle-tagged lines when Nozzle is off). This view is
+   what actually gets rendered/exported: it additionally hides those
+   now-empty nozzle lines so the table and BOQ documents don't show a
+   dangling "qty 0" row. Flip Nozzle back on and they reappear exactly
+   as they were. */
+function visibleMechBoq(){
+  if(OPT_SYS_ON.nozzle) return MECH_BOQ;
+  return MECH_BOQ.filter(it => !(it._sync==='nozCode' || it._sync==='nozPumpCode'));
+}
 function syncCalcCodesToBoq(){
   const useSkimmerOnly = FILT_SYS_ON.skimmer && !FILT_SYS_ON.overflow;
   const src = useSkimmerOnly ? SKIMMER : FILT;
@@ -2269,7 +2290,7 @@ function syncCalcCodesToBoq(){
   // "Drain" is one shared BOQ line fed by up to three sources (main system + nozzle system)
   const drainQtyTotal = (FILT_SYS_ON.overflow ? (+FILT.drainQty||0) : 0)
                        + (FILT_SYS_ON.skimmer ? (+SKIMMER.drainQty||0) : 0)
-                       + (+NOZ.drainQty||0);
+                       + (OPT_SYS_ON.nozzle ? (+NOZ.drainQty||0) : 0);
   let changed = false;
   MECH_BOQ.forEach(it=>{
     if(it.kind!=='item' || !it._sync) return;
@@ -2282,15 +2303,15 @@ function syncCalcCodesToBoq(){
       case 'vacuumCode': val = src.vacuumCode; qty = src.vacuumFinal; break;
       case 'overflowCode': val = FILT.overflowCode; qty = FILT.gutterFinal; break;
       case 'chlorCode':  val = src.chlorCode;  qty = src.chlorFinal; break;
-      case 'nozCode':    val = NOZ.code;       qty = NOZ.count; break;
-      case 'nozPumpCode':val = NOZ.pumpCode;   qty = nozCircpumps; break;
+      case 'nozCode':    val = OPT_SYS_ON.nozzle ? NOZ.code : '';     qty = OPT_SYS_ON.nozzle ? NOZ.count : 0; break;
+      case 'nozPumpCode':val = OPT_SYS_ON.nozzle ? NOZ.pumpCode : ''; qty = OPT_SYS_ON.nozzle ? nozCircpumps : 0; break;
     }
     if(val!==undefined && it.code!==val){ it.code = val; changed = true; }
     if(qty!==undefined && !isNaN(qty)){ qty = cleanNum(qty); if(it.qty!==qty){ it.qty = qty; changed = true; } }
   });
   if(changed){
     const el = qs('#mechboq_table');
-    if(el && el.innerHTML){ buildBoqTable('mechboq_table', MECH_BOQ); recalcAll(); }
+    if(el && el.innerHTML){ buildBoqTable('mechboq_table', visibleMechBoq()); recalcAll(); }
   }
 }
 
@@ -2392,25 +2413,27 @@ async function cesClipboardRead(){
    the answer can be written straight back into this exact field.
    ============================================================ */
 const CES_LINK_FIELDS = [
-  {field:'f_pumpcode',      kind:'pump', target:'overflow',            flowField:'f_flowperpump', headField:'f_pumphead', label:'Select Pump'},
-  {field:'f_filtercode',    kind:'acc',  target:'overflow-filter',     tab:'filtration',   label:'Select Filter'},
-  {field:'f_inletcode',     kind:'acc',  target:'overflow-inlet',      tab:'inlets',       label:'Select Inlet'},
-  {field:'f_overflowcode',  kind:'acc',  target:'overflow-gutter',     tab:'drains',       label:'Select Gutter/Grating'},
-  {field:'f_draincode',     kind:'acc',  target:'overflow-drain',      tab:'drains',       label:'Select Drain'},
-  {field:'f_vacuumcode',    kind:'acc',  target:'overflow-vacuum',     tab:'cleaning',     label:'Select Vacuum Fitting'},
-  {field:'f_chlorcode',     kind:'acc',  target:'overflow-chlor',      tab:'chlorination', label:'Select Chlorinator'},
-  {field:'f_dosingcode',    kind:'acc',  target:'overflow-dosing',     tab:'dosing',       label:'Select Dosing Pump'},
-  {field:'f_controllercode',kind:'acc',  target:'overflow-controller', tab:'chlorination', label:'Select Controller'},
+  {field:'f_pumpcode',      kind:'pump', target:'overflow',            flowField:'f_flowperpump', headField:'f_pumphead', label:'Select Pump',   returnTab:'filtration'},
+  {field:'f_filtercode',    kind:'acc',  target:'overflow-filter',     tab:'filtration',   label:'Select Filter',           returnTab:'filtration'},
+  {field:'f_inletcode',     kind:'acc',  target:'overflow-inlet',      tab:'inlets',       label:'Select Inlet',            returnTab:'filtration'},
+  {field:'f_overflowcode',  kind:'acc',  target:'overflow-gutter',     tab:'drains',       label:'Select Gutter/Grating',   returnTab:'filtration'},
+  {field:'f_draincode',     kind:'acc',  target:'overflow-drain',      tab:'drains',       label:'Select Drain',            returnTab:'filtration'},
+  {field:'f_vacuumcode',    kind:'acc',  target:'overflow-vacuum',     tab:'cleaning',     label:'Select Vacuum Fitting',   returnTab:'filtration'},
+  {field:'f_chlorcode',     kind:'acc',  target:'overflow-chlor',      tab:'chlorination', label:'Select Chlorinator',      returnTab:'filtration'},
+  {field:'f_dosingcode',    kind:'acc',  target:'overflow-dosing',     tab:'dosing',       label:'Select Dosing Pump',      returnTab:'filtration'},
+  {field:'f_controllercode',kind:'acc',  target:'overflow-controller', tab:'chlorination', label:'Select Controller',       returnTab:'filtration'},
 
-  {field:'s_pumpcode',      kind:'pump', target:'skimmer',             flowField:'s_flowperpump', headField:'s_pumphead', label:'Select Pump'},
-  {field:'s_filtercode',    kind:'acc',  target:'skimmer-filter',      tab:'filtration',   label:'Select Filter'},
-  {field:'s_inletcode',     kind:'acc',  target:'skimmer-inlet',       tab:'inlets',       label:'Select Inlet'},
-  {field:'s_skimmercode',   kind:'acc',  target:'skimmer-skimmer',     tab:'skimmers',     label:'Select Skimmer'},
-  {field:'s_draincode',     kind:'acc',  target:'skimmer-drain',       tab:'drains',       label:'Select Drain'},
-  {field:'s_vacuumcode',    kind:'acc',  target:'skimmer-vacuum',      tab:'cleaning',     label:'Select Vacuum Fitting'},
-  {field:'s_chlorcode',     kind:'acc',  target:'skimmer-chlor',       tab:'chlorination', label:'Select Chlorinator'},
-  {field:'s_dosingcode',    kind:'acc',  target:'skimmer-dosing',      tab:'dosing',       label:'Select Dosing Pump'},
-  {field:'s_controllercode',kind:'acc',  target:'skimmer-controller',  tab:'chlorination', label:'Select Controller'},
+  {field:'s_pumpcode',      kind:'pump', target:'skimmer',             flowField:'s_flowperpump', headField:'s_pumphead', label:'Select Pump',   returnTab:'filtration'},
+  {field:'s_filtercode',    kind:'acc',  target:'skimmer-filter',      tab:'filtration',   label:'Select Filter',           returnTab:'filtration'},
+  {field:'s_inletcode',     kind:'acc',  target:'skimmer-inlet',       tab:'inlets',       label:'Select Inlet',            returnTab:'filtration'},
+  {field:'s_skimmercode',   kind:'acc',  target:'skimmer-skimmer',     tab:'skimmers',     label:'Select Skimmer',          returnTab:'filtration'},
+  {field:'s_draincode',     kind:'acc',  target:'skimmer-drain',       tab:'drains',       label:'Select Drain',            returnTab:'filtration'},
+  {field:'s_vacuumcode',    kind:'acc',  target:'skimmer-vacuum',      tab:'cleaning',     label:'Select Vacuum Fitting',   returnTab:'filtration'},
+  {field:'s_chlorcode',     kind:'acc',  target:'skimmer-chlor',       tab:'chlorination', label:'Select Chlorinator',      returnTab:'filtration'},
+  {field:'s_dosingcode',    kind:'acc',  target:'skimmer-dosing',      tab:'dosing',       label:'Select Dosing Pump',      returnTab:'filtration'},
+  {field:'s_controllercode',kind:'acc',  target:'skimmer-controller',  tab:'chlorination', label:'Select Controller',       returnTab:'filtration'},
+
+  {field:'n_pumpcode',      kind:'pump', target:'nozzle',              flowField:'n_totalflow',   headField:'n_pumphead', label:'Select Pump',   returnTab:'nozzle'},
 ];
 const CES_TARGET_FIELD_MAP = {};
 CES_LINK_FIELDS.forEach(cfg=>{ CES_TARGET_FIELD_MAP[cfg.target] = cfg.field; });
@@ -2429,7 +2452,7 @@ function injectCesLinkButtons(){
   });
 }
 function openCesLinkedTool(cfg){
-  const returnUrl = location.pathname.split('/').pop() + '?tab=filtration';
+  const returnUrl = location.pathname.split('/').pop() + '?tab=' + (cfg.returnTab || 'filtration');
   const qsp = new URLSearchParams();
   qsp.set('target', cfg.target);
   qsp.set('return', returnUrl);
@@ -2462,6 +2485,61 @@ function applyCesTarget(src){
    permission needed, works even without the button being pressed on
    the sending side reaching the OS clipboard). Returns the number of
    items processed (0 if the inbox was empty). */
+/* ============================================================
+   PROJECT STATE PERSISTENCE
+   Every meaningful edit funnels through recalcAll() (18+ call sites),
+   so autosaving there covers almost everything; the couple of toggles
+   that don't call recalcAll() (system on/off switches) save explicitly
+   too. Without this, navigating away to Pump Selector / Accessories
+   Selector and back reloads the page from scratch and wipes every
+   edit back to the original workbook defaults — this is what actually
+   fixes that.
+   ============================================================ */
+const CES_PERSIST_KEY = 'ces_boq_project_state';
+function restoreArrayInPlace(target, saved){
+  if(!Array.isArray(target) || !Array.isArray(saved)) return;
+  target.length = 0;
+  saved.forEach(x=>target.push(x));
+}
+function saveProjectState(){
+  try{
+    const snapshot = {
+      RATES, COVER, FILT, NOZ, SKIMMER, FILT_SYS_ON, OPT_SYS_ON, HEATING,
+      ELEC_MATLIST, MATLIST_OVERFLOW, MATLIST_SKIMMER, MATLIST_NOZ,
+      MECH_BOQ, ELEC_BOQ, PF_MAIN, PF_SPECIAL, V_MAIN, V_SPECIAL
+    };
+    localStorage.setItem(CES_PERSIST_KEY, JSON.stringify(snapshot));
+  }catch(e){ /* storage full/unavailable — autosave just skips this once */ }
+}
+function loadProjectState(){
+  let s;
+  try{
+    const raw = localStorage.getItem(CES_PERSIST_KEY);
+    if(!raw) return false;
+    s = JSON.parse(raw);
+  }catch(e){ return false; }
+  if(!s || typeof s !== 'object') return false;
+  if(s.RATES) Object.assign(RATES, s.RATES);
+  if(s.COVER) Object.assign(COVER, s.COVER);
+  if(s.FILT) Object.assign(FILT, s.FILT);
+  if(s.NOZ) Object.assign(NOZ, s.NOZ);
+  if(s.SKIMMER) Object.assign(SKIMMER, s.SKIMMER);
+  if(s.FILT_SYS_ON) Object.assign(FILT_SYS_ON, s.FILT_SYS_ON);
+  if(s.OPT_SYS_ON) Object.assign(OPT_SYS_ON, s.OPT_SYS_ON);
+  if(s.HEATING) Object.assign(HEATING, s.HEATING);
+  restoreArrayInPlace(ELEC_MATLIST, s.ELEC_MATLIST);
+  restoreArrayInPlace(MATLIST_OVERFLOW, s.MATLIST_OVERFLOW);
+  restoreArrayInPlace(MATLIST_SKIMMER, s.MATLIST_SKIMMER);
+  restoreArrayInPlace(MATLIST_NOZ, s.MATLIST_NOZ);
+  restoreArrayInPlace(MECH_BOQ, s.MECH_BOQ);
+  restoreArrayInPlace(ELEC_BOQ, s.ELEC_BOQ);
+  restoreArrayInPlace(PF_MAIN, s.PF_MAIN);
+  restoreArrayInPlace(PF_SPECIAL, s.PF_SPECIAL);
+  restoreArrayInPlace(V_MAIN, s.V_MAIN);
+  restoreArrayInPlace(V_SPECIAL, s.V_SPECIAL);
+  return true;
+}
+
 function drainBoqInbox(){
   let items;
   try{ items = JSON.parse(localStorage.getItem('ces_boq_inbox') || '[]'); }
@@ -2474,7 +2552,7 @@ function drainBoqInbox(){
     applyCesTarget(src);
   });
   localStorage.removeItem('ces_boq_inbox');
-  buildBoqTable('mechboq_table', MECH_BOQ);
+  buildBoqTable('mechboq_table', visibleMechBoq());
   recalcAll();
   const parts=[];
   if(added) parts.push(added+' added');
@@ -2499,7 +2577,7 @@ async function importFromTool(){
   if(!items.length){ toast('⚠ Nothing queued yet — open the other tool and tap "Send to BOQ" first'); return; }
   let added=0, updated=0;
   items.forEach(src=>{ if(importBoqItem(src)==='updated') updated++; else added++; });
-  buildBoqTable('mechboq_table', MECH_BOQ);
+  buildBoqTable('mechboq_table', visibleMechBoq());
   recalcAll();
   const parts=[];
   if(added) parts.push(added+' added');
@@ -2784,13 +2862,14 @@ function recalcAll(){
   qs('#pipe_total_tag').textContent = 'Total EGP ' + fmt(pfEngine.grandTotal(),0);
   qs('#valves_total_tag').textContent = 'Total EGP ' + fmt(vEngine.grandTotal(),0);
 
-  const mechTotal = patchBoqTable('mechboq_table', MECH_BOQ);
+  const mechTotal = patchBoqTable('mechboq_table', visibleMechBoq());
   const elecTotal = patchBoqTable('elecboq_table', ELEC_BOQ);
   qs('#mechboq_total_tag').textContent = 'Total EGP ' + fmt(mechTotal,0);
   qs('#elecboq_total_tag').textContent = 'Total EGP ' + fmt(elecTotal,0);
 
   renderSummary();
   updateHeaderTotal();
+  saveProjectState();
 }
 
 /* ============================================================
@@ -2998,7 +3077,7 @@ function exportExcel(){
     aoa.push(['TOTAL','','','','','','','','','','','', {f:`SUM(M${firstDataRow}:M${lastDataRow})`}]);
     return aoa;
   }
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(boqAOA(MECH_BOQ)), 'MECH-BOQ');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(boqAOA(visibleMechBoq())), 'MECH-BOQ');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(boqAOA(ELEC_BOQ)), 'ELEC-BOQ');
 
   // ---- PIPE & FITTING / VALVES ----
@@ -3216,7 +3295,7 @@ function exportPdf(){
     headStyles:{fillColor:PRIMARY, textColor:255, fontStyle:'bold', fontSize:7.5},
     columnStyles:{0:{cellWidth:26},1:{cellWidth:170},2:{cellWidth:70},3:{cellWidth:24,halign:'center'},4:{cellWidth:28},5:{halign:'right'},6:{halign:'right',cellWidth:56}},
     head:[['Item','Description','Brand','Qty','Unit','Dry Cost','Total Price']],
-    body: MECH_BOQ.map(it=>{
+    body: visibleMechBoq().map(it=>{
       if(it.kind==='section') return [{content:`${it.no} — ${it.desc}`, colSpan:7, styles:{fillColor:[233,242,247], textColor:DEEP, fontStyle:'bold'}}];
       if(it.kind==='subheader') return [{content:it.desc, colSpan:7, styles:{fillColor:[245,249,251], textColor:TEAL, fontStyle:'italic'}}];
       const dry = resolveDry(it); const c = boqCalc(dry, it.qty, it.noMarkup, it.noVat, it.vatOverride);
@@ -3356,7 +3435,7 @@ function buildEverything(){
   tagMechSyncKeys();
   tagElecSyncKeys();
   syncCalcCodesToBoq();
-  buildBoqTable('mechboq_table', MECH_BOQ);
+  buildBoqTable('mechboq_table', visibleMechBoq());
   buildBoqTable('elecboq_table', ELEC_BOQ);
   initBoqAddControls();
   buildMainCrossTable('pipe_table', PF_MAIN, pfEngine);
@@ -3375,6 +3454,7 @@ function buildEverything(){
 document.addEventListener('DOMContentLoaded', ()=>{
   qs('#logoImg').src = 'data:image/png;base64,'+LOGO_B64;
   initTabs();
+  loadProjectState(); // restore anything autosaved from a previous visit/session
   buildEverything();
   drainBoqInbox(); // auto-pull anything sent from Pump Selector / Accessories Selector
   injectCesLinkButtons();
