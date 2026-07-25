@@ -79,13 +79,15 @@ h1,h2,h3,h4{font-family:'Sora',sans-serif; margin:0; letter-spacing:-.01em;}
   background:#a2620a;color:#fff;border:none;padding:8px 14px;border-radius:8px;
   font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;
 }
+input.ces-has-link{padding-right:32px;}
 .ces-link-btn{
-  display:inline-flex;align-items:center;gap:4px;margin-top:6px;
-  background:rgba(18,98,143,.08);color:var(--primary);border:1px solid rgba(18,98,143,.28);
-  font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;
+  position:absolute;right:5px;bottom:5px;width:22px;height:22px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--primary);color:#fff;border:none;border-radius:6px;
+  font-size:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.18);
   transition:background .15s;
 }
-.ces-link-btn:hover{background:rgba(18,98,143,.18);}
+.ces-link-btn:hover{background:var(--primary-2);}
 .topbar::after{
   content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:
@@ -152,7 +154,7 @@ h1,h2,h3,h4{font-family:'Sora',sans-serif; margin:0; letter-spacing:-.01em;}
 @media(max-width:760px){.grid.c2,.grid.c3,.grid.c4{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:480px){.grid.c2,.grid.c3,.grid.c4{grid-template-columns:minmax(0,1fr);}}
 
-.field{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0;position:relative;}
 .field label{font-size:11.5px;color:var(--text-muted);font-weight:600;}
 .field .unit{font-size:10.5px;color:var(--text-muted);font-weight:500;}
 input[type=text],input[type=number],input[type=date],select,textarea{
@@ -283,13 +285,13 @@ td.desc-cell b{color:var(--text);}
 </head>
 <body>
 <div class="install-banner" id="installBanner">
-  <span>📲 Install as App on your device</span>
+  <span>📲 Install App</span>
   <button id="installBtn">Install</button>
 </div>
 <div id="app">
 
   <div class="topbar">
-    <a class="hub-link" href="./CES-Suite-Hub.html" title="Back to the Engineering Suite hub">⌂ Suite Hub</a>
+    <a class="hub-link" href="./CES-Suite-Hub.html" title="Suite Hub">⌂ Suite Hub</a>
     <div class="logo-badge"><img id="logoImg" src="" alt="CES"></div>
     <div class="titles">
       <h1 id="hdrProjectName">OPEN AIR MALL — WATER FEATURES</h1>
@@ -356,26 +358,22 @@ td.desc-cell b{color:var(--text);}
           <div class="field"><label>Profit %</label><input class="editable" id="rt_profit" type="number" step="0.01"></div>
           <div class="field"><label>USD → EGP Rate</label><input class="editable" id="rt_fx" type="number" step="0.01"></div>
         </div>
-        <div class="note">These four rates are wired live into every calculation, exactly as in the original workbook (Dry Cost → VAT → Installation → Concept Cost → Profit → Unit Rate → Total). Change any of them and every BOQ sheet recalculates instantly.</div>
       </div>
     </div>
 
     <div class="card" id="optSystemsCard">
-      <div class="card-h"><h3>Optional Systems</h3><span class="tag">Not every pool needs these — switch off what doesn't apply</span></div>
+      <div class="card-h"><h3>Optional Systems</h3></div>
       <div class="card-b">
         <div class="grid c2">
-          <button type="button" class="btn" id="chooseNozzleBtn" data-on="1" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
-            <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">⛲ Waterfall / Nozzle Display</span>
-            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Only if this pool has nozzle jets or a waterfall feature</span>
+          <button type="button" class="btn" id="chooseNozzleBtn" data-on="1" style="justify-content:flex-start;gap:10px;position:relative;padding:12px 16px;">
+            <span class="sys-check" style="position:absolute;top:50%;right:14px;margin-top:-10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
+            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">⛲ Nozzle / Waterfall</span>
           </button>
-          <button type="button" class="btn" id="chooseHeatingBtn" data-on="1" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
-            <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">🔥 Heating System</span>
-            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Only if this pool has a heating requirement</span>
+          <button type="button" class="btn" id="chooseHeatingBtn" data-on="1" style="justify-content:flex-start;gap:10px;position:relative;padding:12px 16px;">
+            <span class="sys-check" style="position:absolute;top:50%;right:14px;margin-top:-10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
+            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">🔥 Heating</span>
           </button>
         </div>
-        <div class="note">Switching a system off just hides its tab from the top navigation. Anything already added to its Material List / BOQ stays exactly where it is — it won't get deleted automatically, so double-check those sheets if you turn a system off mid-project.</div>
       </div>
     </div>
   </div>
@@ -732,7 +730,6 @@ td.desc-cell b{color:var(--text);}
   </div>
   <!-- ============ NOZZLE DISPLAY ============ -->
   <div class="panel" id="panel-nozzle">
-    <div class="note" style="margin-bottom:14px;"><b>Waterfall feature</b> — this tab sizes the cascade nozzles that create the waterfall/curtain effect (BOQ item "CASCADE NOZZLE", code 66693 by default), plus its dedicated pump and drain.</div>
     <div class="legend">
       <span><i class="in"></i> Editable input</span>
       <span><i class="co"></i> Calculated (live)</span>
@@ -879,7 +876,6 @@ td.desc-cell b{color:var(--text);}
           <div class="field"><label>Pump Flow Rate <span class="unit">m³/hr</span></label><input class="editable" id="h_pumpflow" type="number" step="0.5"></div>
           <div class="field"><label>Pump Head <span class="unit">m</span></label><input class="editable" id="h_pumphead" type="number" step="0.5"></div>
         </div>
-        <div class="note">Pump head references an external pump-curve workbook in the source file, so it's a plain editable field here rather than a formula.</div>
       </div>
     </div>
 
@@ -890,7 +886,6 @@ td.desc-cell b{color:var(--text);}
   </div>
   <!-- ============ MATERIAL LISTS ============ -->
   <div class="panel" id="panel-materials">
-    <div class="note" style="margin-bottom:14px;">These lists are fully editable — add, remove, or override anything (description, brand, code, qty). Use "↻ Sync from calculator" any time you want to pull fresh quantities/codes from the current Filtration/Nozzle design instead.</div>
     <div class="card" id="matlistOverflowCard" style="display:none;">
       <div class="card-h"><h3>Overflow System — Material List</h3>
         <span style="display:flex;gap:8px;">
@@ -1017,15 +1012,14 @@ td.desc-cell b{color:var(--text);}
       <div class="card-b pad0"><div class="tblwrap" id="sum_total_table"></div></div>
     </div>
 
-    <div class="note">This summary, along with the full BOQ breakdown, can be exported as a branded PDF or as a multi-sheet Excel workbook using the buttons below.</div>
   </div>
 
 </div><!-- /#app -->
 
 <div class="dock">
   <div class="dock-inner">
-    <button class="btn ghost sm" id="btnReset" title="Reset all values to the original workbook defaults">↺ Reset</button>
-    <button class="btn ghost sm" id="btnImportTool" title="Pulls in anything sent from Pump Selector or Pool Accessories Selector. This also happens automatically every time you open this page.">📥 Import from Tool</button>
+    <button class="btn ghost sm" id="btnReset" title="Reset to defaults">↺ Reset</button>
+    <button class="btn ghost sm" id="btnImportTool" title="Import from Pump Selector / Accessories Selector">📥 Import from Tool</button>
     <button class="btn teal" id="btnExportExcel">⬇ Export Excel</button>
     <button class="btn primary" id="btnExportPdf">⬇ Export PDF</button>
   </div>
@@ -1145,7 +1139,7 @@ let COVER = {
   dept: "Electro-Mechanical",
   status: "Tender package",
   client: "TMG",
-  preparedby: "Masoud Mostafa Masoud",
+  preparedby: "Hesham Mohamed Ragab",
   approvedby: "NourEldin Mahmoud",
   date: "June, 2026",
   company: "CONCEPT FOR ELECTRO-MECHANICAL SYSTEMS",
@@ -1554,7 +1548,7 @@ function refreshFiltSystemUI(){
   if(anyOn){
     const names = [FILT_SYS_ON.overflow?'Overflow':null, FILT_SYS_ON.skimmer?'Skimmer':null].filter(Boolean);
     note.style.display='';
-    note.innerHTML = `Active: <b>${names.join(' + ')}</b>${names.length>1?' (both systems run side by side — each with its own Material List)':''} — this drives Material Lists and the Summary KPIs.`;
+    note.innerHTML = `Active: <b>${names.join(' + ')}</b>`;
   } else {
     note.style.display='none';
   }
@@ -2081,7 +2075,7 @@ function boqRowHtml(it, idx){
   const isUsd = it.usd!==undefined;
   const isLinked = !!it.link;
   let dryCell;
-  const usdToggleBtn = `<button type="button" class="btn sm ghost" data-toggleusd="1" title="${isUsd?'Switch back to a plain EGP price':'Price this item in USD (× exchange rate)'}" style="padding:2px 7px;font-size:10px;line-height:1;">${isUsd?'EGP':'$'}</button>`;
+  const usdToggleBtn = `<button type="button" class="btn sm ghost" data-toggleusd="1" title="${isUsd?'Switch to EGP':'Price in USD'}" style="padding:2px 7px;font-size:10px;line-height:1;">${isUsd?'EGP':'$'}</button>`;
   if(isUsd){
     dryCell = `<div style="display:flex;align-items:flex-start;gap:5px;">
         <div>
@@ -2111,7 +2105,7 @@ function boqRowHtml(it, idx){
     <td class="num">${dryCell}</td>
     <td class="num"><input class="editable" data-idx="${idx}" data-f="vatOverride" type="number" step="0.01"
       value="${hasVatOverride ? it.vatOverride : ''}" placeholder="${fmt(autoVat,2)}"
-      title="Auto = Dry Cost × VAT rate (${fmt(RATES.vat*100,0)}%). Type a number to set this row's VAT manually; clear the box to go back to auto."
+      title="Auto = ${fmt(RATES.vat*100,0)}% VAT. Type to override."
       style="width:78px;"></td>
     <td class="num" data-role="inst"></td>
     <td class="num" data-role="concept"></td>
@@ -2443,10 +2437,12 @@ function injectCesLinkButtons(){
     const input = qs('#'+cfg.field);
     if(!input || input.dataset.cesLinked) return;
     input.dataset.cesLinked = '1';
+    input.classList.add('ces-has-link');
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ces-link-btn';
-    btn.textContent = '🔗 ' + cfg.label;
+    btn.title = cfg.label;
+    btn.textContent = '🔗';
     btn.addEventListener('click', ()=> openCesLinkedTool(cfg));
     input.insertAdjacentElement('afterend', btn);
   });
