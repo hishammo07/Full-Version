@@ -1139,7 +1139,7 @@ let COVER = {
   dept: "Electro-Mechanical",
   status: "Tender package",
   client: "TMG",
-  preparedby: "Hesham Mohamed Ragab",
+  preparedby: "Masoud Mostafa Masoud",
   approvedby: "NourEldin Mahmoud",
   date: "June, 2026",
   company: "CONCEPT FOR ELECTRO-MECHANICAL SYSTEMS",
@@ -2428,6 +2428,8 @@ const CES_LINK_FIELDS = [
   {field:'s_controllercode',kind:'acc',  target:'skimmer-controller',  tab:'chlorination', label:'Select Controller',       returnTab:'filtration'},
 
   {field:'n_pumpcode',      kind:'pump', target:'nozzle',              flowField:'n_totalflow',   headField:'n_pumphead', label:'Select Pump',   returnTab:'nozzle'},
+  {field:'n_code',          kind:'acc',  target:'nozzle-nozzle',       tab:'nozzles',      label:'Select Nozzle',           returnTab:'nozzle'},
+  {field:'n_draincode',     kind:'acc',  target:'nozzle-drain',        tab:'drains',       label:'Select Drain',            returnTab:'nozzle'},
 ];
 const CES_TARGET_FIELD_MAP = {};
 CES_LINK_FIELDS.forEach(cfg=>{ CES_TARGET_FIELD_MAP[cfg.target] = cfg.field; });
