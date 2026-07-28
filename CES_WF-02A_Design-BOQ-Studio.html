@@ -16,39 +16,41 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --deep: #0d3b5c;
-  --primary: #12628f;
-  --primary-2: #1c85c4;
-  --teal: #0e9488;
-  --teal-2: #14b8a6;
-  --bg: #eef3f6;
-  --surface: #ffffff;
-  --surface-2: #f6f9fb;
-  --border: #d7e2ea;
-  --border-soft: #e7eef3;
-  --text: #16232c;
-  --text-muted: #5b7183;
+  --deep: #0e3b57;
+  --primary: #17628a;
+  --primary-2: #2686bd;
+  --teal: #128a80;
+  --teal-2: #1fada0;
+  --bg: #eef2f5;
+  --surface: #fcfdfe;
+  --surface-2: #f5f8fa;
+  --border: #dbe4ea;
+  --border-soft: #e9eef2;
+  --text: #253138;
+  --text-muted: #647685;
   --input: #1447b8;
   --input-bg: #eef4ff;
-  --computed: #0f2130;
+  --computed: #16232c;
   --amber: #a2620a;
   --amber-bg: #fdf3e3;
   --danger: #b3311f;
-  --shadow: 0 2px 10px rgba(13,59,92,.07), 0 1px 2px rgba(13,59,92,.06);
-  --radius: 10px;
+  --shadow: 0 2px 12px rgba(13,59,92,.06), 0 1px 2px rgba(13,59,92,.05);
+  --radius: 12px;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   background:
-    radial-gradient(1100px 420px at 100% -10%, rgba(28,133,196,.10), transparent 60%),
-    radial-gradient(900px 380px at -10% 0%, rgba(14,148,136,.09), transparent 55%),
+    radial-gradient(1100px 420px at 100% -10%, rgba(38,134,189,.08), transparent 60%),
+    radial-gradient(900px 380px at -10% 0%, rgba(18,138,128,.07), transparent 55%),
     var(--bg);
   color:var(--text);
   min-height:100vh;
   font-size:14px;
-  line-height:1.5;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
 }
 h1,h2,h3,h4{font-family:'Sora',sans-serif; margin:0; letter-spacing:-.01em;}
 .num{font-variant-numeric:tabular-nums;}
@@ -57,20 +59,41 @@ h1,h2,h3,h4{font-family:'Sora',sans-serif; margin:0; letter-spacing:-.01em;}
 /* ---------- App shell ---------- */
 #app{max-width:1320px;margin:0 auto;padding:14px 14px 90px;}
 
+@keyframes topbarDrift{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+@keyframes waveDrift{
+  from{transform:translateX(0);}
+  to{transform:translateX(-50%);}
+}
 .topbar{
   display:flex;align-items:center;gap:14px;
-  background:linear-gradient(120deg,var(--deep),var(--primary) 60%,var(--primary-2));
+  background:linear-gradient(120deg,var(--deep),var(--primary) 45%,var(--teal) 75%,var(--primary-2));
+  background-size:260% 260%;
+  animation:topbarDrift 16s ease-in-out infinite;
   border-radius:16px;padding:16px 20px;color:#fff;box-shadow:var(--shadow);
   position:relative;overflow:hidden;
 }
-.topbar .hub-link{
-  position:absolute; top:14px; right:18px;
-  display:flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.32);
-  color:#fff; text-decoration:none; font-size:12px; font-weight:700; white-space:nowrap;
-  padding:6px 13px; border-radius:999px; transition:background .15s;
+.topbar-waves{position:absolute;left:0;right:0;bottom:-2px;height:56px;overflow:hidden;pointer-events:none;}
+.wave-layer{position:absolute;left:0;bottom:0;height:100%;width:200%;display:flex;}
+.wave-layer svg{width:50%;height:100%;flex:none;display:block;}
+.wave-layer.layer1{animation:waveDrift 22s linear infinite;opacity:.28;}
+.wave-layer.layer2{animation:waveDrift 15s linear infinite reverse;opacity:.18;}
+@media(prefers-reduced-motion:reduce){
+  .topbar{animation:none;}
+  .wave-layer.layer1,.wave-layer.layer2{animation:none;}
 }
-.topbar .hub-link:hover{ background:rgba(255,255,255,.26); }
+.topbar .hub-link{
+  position:relative; z-index:1; flex:none; align-self:center;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.22); border:1.4px solid rgba(255,255,255,.55);
+  color:#fff; text-decoration:none; font-size:12px; font-weight:700; white-space:nowrap;
+  padding:8px 14px; border-radius:999px; transition:background .15s, border-color .15s;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+}
+.topbar .hub-link:hover{ background:rgba(255,255,255,.34); border-color:rgba(255,255,255,.75); }
 .install-banner{
   background:var(--deep);color:#fff;padding:11px 16px;display:none;
   align-items:center;justify-content:space-between;gap:12px;font-size:13px;
@@ -285,13 +308,22 @@ td.desc-cell b{color:var(--text);}
 </head>
 <body>
 <div class="install-banner" id="installBanner">
-  <span>📲 Install App</span>
+  <span>Install App</span>
   <button id="installBtn">Install</button>
 </div>
 <div id="app">
 
   <div class="topbar">
-    <a class="hub-link" href="./CES-Suite-Hub.html" title="Suite Hub">⌂ Suite Hub</a>
+    <div class="topbar-waves">
+      <div class="wave-layer layer1">
+        <svg viewBox="0 0 600 60" preserveAspectRatio="none"><path d="M0,30 C75,10 75,50 150,30 C225,10 225,50 300,30 C375,10 375,50 450,30 C525,10 525,50 600,30 L600,60 L0,60 Z" fill="#ffffff"></path></svg>
+        <svg viewBox="0 0 600 60" preserveAspectRatio="none"><path d="M0,30 C75,10 75,50 150,30 C225,10 225,50 300,30 C375,10 375,50 450,30 C525,10 525,50 600,30 L600,60 L0,60 Z" fill="#ffffff"></path></svg>
+      </div>
+      <div class="wave-layer layer2">
+        <svg viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0,20 C50,35 100,5 150,20 C200,35 250,5 300,20 C350,35 400,5 450,20 C500,35 550,5 600,20 L600,40 L0,40 Z" fill="#ffffff"></path></svg>
+        <svg viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0,20 C50,35 100,5 150,20 C200,35 250,5 300,20 C350,35 400,5 450,20 C500,35 550,5 600,20 L600,40 L0,40 Z" fill="#ffffff"></path></svg>
+      </div>
+    </div>
     <div class="logo-badge"><img id="logoImg" src="" alt="CES"></div>
     <div class="titles">
       <h1 id="hdrProjectName">OPEN AIR MALL — WATER FEATURES</h1>
@@ -301,6 +333,7 @@ td.desc-cell b{color:var(--text);}
       <div class="lbl">Grand Total (EGP)</div>
       <div class="val num" id="hdrGrandTotal">0</div>
     </div>
+    <a class="hub-link" href="./CES-Suite-Hub.html" title="Suite Hub">⌂ Suite Hub</a>
   </div>
 
   <div class="tabs" id="tabBar">
@@ -319,7 +352,7 @@ td.desc-cell b{color:var(--text);}
   <!-- ============ COVER ============ -->
   <div class="panel active" id="panel-cover">
     <div class="card">
-      <div class="card-h"><h3>Project Information</h3><span class="tag">Editable — drives cover, PDF &amp; Excel exports</span></div>
+      <div class="card-h"><h3>Project Information</h3></div>
       <div class="card-b">
         <div class="grid c3">
           <div class="field"><label>Project Name</label><input class="editable" id="cv_project" type="text"></div>
@@ -336,7 +369,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Company / Brand</h3><span class="tag">Shown on cover &amp; PDF header</span></div>
+      <div class="card-h"><h3>Company / Brand</h3></div>
       <div class="card-b">
         <div class="grid c2">
           <div class="field"><label>Company Name</label><input class="editable" id="cv_company" type="text"></div>
@@ -350,7 +383,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Global Commercial Rates</h3><span class="tag">Applied across every BOQ sheet</span></div>
+      <div class="card-h"><h3>Global Commercial Rates</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>VAT %</label><input class="editable" id="rt_vat" type="number" step="0.01"></div>
@@ -367,11 +400,11 @@ td.desc-cell b{color:var(--text);}
         <div class="grid c2">
           <button type="button" class="btn" id="chooseNozzleBtn" data-on="1" style="justify-content:flex-start;gap:10px;position:relative;padding:12px 16px;">
             <span class="sys-check" style="position:absolute;top:50%;right:14px;margin-top:-10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">⛲ Nozzle / Waterfall</span>
+            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">Nozzle / Waterfall</span>
           </button>
           <button type="button" class="btn" id="chooseHeatingBtn" data-on="1" style="justify-content:flex-start;gap:10px;position:relative;padding:12px 16px;">
             <span class="sys-check" style="position:absolute;top:50%;right:14px;margin-top:-10px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">🔥 Heating</span>
+            <span style="font-family:'Sora';font-weight:700;font-size:14px;color:var(--deep);">Heating</span>
           </button>
         </div>
       </div>
@@ -381,18 +414,16 @@ td.desc-cell b{color:var(--text);}
   <div class="panel" id="panel-filtration">
 
     <div class="card" id="filtSystemChooserCard">
-      <div class="card-h"><h3>Which Filtration System(s)?</h3><span class="tag">Toggle either or both — drives Material Lists &amp; Summary</span></div>
+      <div class="card-h"><h3>Which Filtration System(s)?</h3></div>
       <div class="card-b">
         <div class="grid c2">
           <button type="button" class="btn" id="chooseOverflowBtn" data-on="0" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
             <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">🌊 Overflow System</span>
-            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Deck-level gutter overflow, balance tank, gutter drains</span>
+            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">Overflow System</span>
           </button>
           <button type="button" class="btn" id="chooseSkimmerBtn" data-on="0" style="justify-content:flex-start;text-align:left;padding:18px;height:auto;flex-direction:column;align-items:flex-start;gap:6px;position:relative;">
             <span class="sys-check" style="position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:#fff;"></span>
-            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">🧲 Skimmer System</span>
-            <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Surface skimmers, no balance tank required</span>
+            <span style="font-family:'Sora';font-weight:700;font-size:15px;color:var(--deep);">Skimmer System</span>
           </button>
         </div>
         <div class="note" id="filtSystemActiveNote" style="display:none;margin-top:12px;"></div>
@@ -401,19 +432,14 @@ td.desc-cell b{color:var(--text);}
 
     <div id="filtSystemEmptyState" class="card">
       <div class="card-b" style="text-align:center;padding:40px 20px;color:var(--text-muted);">
-        <div style="font-size:15px;font-weight:600;color:var(--deep);margin-bottom:6px;">No filtration system switched on yet</div>
-        Turn on <b>Overflow</b>, <b>Skimmer</b>, or both above — a pool can use either or both together.
+        <div style="font-size:15px;font-weight:600;color:var(--deep);">No filtration system active</div>
       </div>
     </div>
 
     <div id="overflowSystemBody" style="display:none;">
-    <div class="legend">
-      <span><i class="in"></i> Editable input</span>
-      <span><i class="co"></i> Calculated (live)</span>
-    </div>
 
     <div class="card">
-      <div class="card-h"><h3>Physical Properties</h3><span class="tag">Filtration system</span></div>
+      <div class="card-h"><h3>Physical Properties</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Fluid Temperature <span class="unit">°C</span></label><input class="editable" id="f_temp" type="number" step="0.1"></div>
@@ -489,7 +515,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Surge / Balance Tank</h3><span class="tag">Egyptian Code 301-Part3</span></div>
+      <div class="card-h"><h3>Surge / Balance Tank</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>V1 · Backwash (10 min) <span class="unit">m³</span></label><input class="computed" id="f_v1" inputmode="decimal" autocomplete="off"></div>
@@ -531,7 +557,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Main Drain &amp; Suction Line</h3><span class="tag">Max velocity 1.5 m/s per Egy-code</span></div>
+      <div class="card-h"><h3>Main Drain &amp; Suction Line</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Drain Capacity Each <span class="unit">m³/hr</span></label><input class="editable" id="f_draincap" type="number" step="1"></div>
@@ -578,13 +604,9 @@ td.desc-cell b{color:var(--text);}
     </div><!-- /#overflowSystemBody -->
 
     <div id="skimmerSystemBody" style="display:none;">
-    <div class="legend">
-      <span><i class="in"></i> Editable input</span>
-      <span><i class="co"></i> Calculated (live)</span>
-    </div>
 
     <div class="card">
-      <div class="card-h"><h3>Physical Properties</h3><span class="tag">Skimmer system</span></div>
+      <div class="card-h"><h3>Physical Properties</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Fluid Temperature <span class="unit">°C</span></label><input class="editable" id="s_temp" type="number" step="0.1"></div>
@@ -661,7 +683,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Inlets &amp; Skimmers</h3><span class="tag">No balance tank — skimmers draw directly from the pool surface</span></div>
+      <div class="card-h"><h3>Inlets &amp; Skimmers</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Inlets by Area (1/25m²)</label><input class="computed" id="s_inlets_area" inputmode="decimal" autocomplete="off"></div>
@@ -730,13 +752,9 @@ td.desc-cell b{color:var(--text);}
   </div>
   <!-- ============ NOZZLE DISPLAY ============ -->
   <div class="panel" id="panel-nozzle">
-    <div class="legend">
-      <span><i class="in"></i> Editable input</span>
-      <span><i class="co"></i> Calculated (live)</span>
-    </div>
 
     <div class="card">
-      <div class="card-h"><h3>Physical Properties</h3><span class="tag">Waterfall — Cascade Nozzle Display</span></div>
+      <div class="card-h"><h3>Physical Properties</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Fluid Temperature <span class="unit">°C</span></label><input class="editable" id="n_temp" type="number" step="0.1"></div>
@@ -800,13 +818,9 @@ td.desc-cell b{color:var(--text);}
   </div>
   <!-- ============ HEATING CALC ============ -->
   <div class="panel" id="panel-heating">
-    <div class="legend">
-      <span><i class="in"></i> Editable input</span>
-      <span><i class="co"></i> Calculated (live)</span>
-    </div>
 
     <div class="card">
-      <div class="card-h"><h3>Pool Data</h3><span class="tag">Heating system — independent of Filtration tab</span></div>
+      <div class="card-h"><h3>Pool Data</h3></div>
       <div class="card-b">
         <div class="grid c4">
           <div class="field"><label>Length <span class="unit">m</span></label><input class="editable" id="h_length" type="number" step="0.01"></div>
@@ -880,7 +894,7 @@ td.desc-cell b{color:var(--text);}
     </div>
 
     <div class="card">
-      <div class="card-h"><h3>Heating Equipment — Reference List</h3><span class="tag">Add these to the Mechanical BOQ using "+ Item" if required</span></div>
+      <div class="card-h"><h3>Heating Equipment — Reference List</h3></div>
       <div class="card-b pad0"><div class="tblwrap" id="heating_equipment_list"></div></div>
     </div>
   </div>
@@ -906,7 +920,7 @@ td.desc-cell b{color:var(--text);}
     </div>
     <div class="card" id="matlistNoneCard">
       <div class="card-b" style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">
-        No filtration system switched on — go to <b>Filtration Design</b> to turn on Overflow and/or Skimmer.
+        No filtration system active
       </div>
     </div>
     <div class="card" id="matlistNozzleCard">
@@ -959,11 +973,11 @@ td.desc-cell b{color:var(--text);}
       <div class="card-b pad0"><div class="tblwrap" id="pipe_table"></div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Auto-derived Consumables (Solvent Weld &amp; Primer)</h3><span class="tag">Formula-linked to fitting quantities above</span></div>
+      <div class="card-h"><h3>Auto-derived Consumables (Solvent Weld &amp; Primer)</h3></div>
       <div class="card-b pad0"><div class="tblwrap" id="pipe_special_table"></div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Cost per Meter Analysis</h3><span class="tag">Pipe run + matching fittings, by diameter</span></div>
+      <div class="card-h"><h3>Cost per Meter Analysis</h3></div>
       <div class="card-b pad0"><div class="tblwrap" id="pipe_unitcost_table"></div></div>
     </div>
   </div>
@@ -975,7 +989,7 @@ td.desc-cell b{color:var(--text);}
       <div class="card-b pad0"><div class="tblwrap" id="valves_table"></div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Auto-derived Consumables (Solvent Weld &amp; Primer)</h3><span class="tag">Formula-linked to valve quantities above</span></div>
+      <div class="card-h"><h3>Auto-derived Consumables (Solvent Weld &amp; Primer)</h3></div>
       <div class="card-b pad0"><div class="tblwrap" id="valves_special_table"></div></div>
     </div>
   </div>
@@ -1019,7 +1033,7 @@ td.desc-cell b{color:var(--text);}
 <div class="dock">
   <div class="dock-inner">
     <button class="btn ghost sm" id="btnReset" title="Reset to defaults">↺ Reset</button>
-    <button class="btn ghost sm" id="btnImportTool" title="Import from Pump Selector / Accessories Selector">📥 Import from Tool</button>
+    <button class="btn ghost sm" id="btnImportTool" title="Import from Pump Selector / Accessories Selector">Import from Tool</button>
     <button class="btn teal" id="btnExportExcel">⬇ Export Excel</button>
     <button class="btn primary" id="btnExportPdf">⬇ Export PDF</button>
   </div>
